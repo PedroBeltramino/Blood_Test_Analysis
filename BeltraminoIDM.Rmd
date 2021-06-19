@@ -1,0 +1,75 @@
+
+
+
+
+```
+
+e- Construcción de arbol predictivo.
+
+
+Variable de decision dicotomica
+```{r, e- Construcción del arbol predictivo, echo = TRUE}
+
+
+cardio <- mutate(cardio, Obesidad = ifelse(cardio$imc>=30, "SI", "NO"))
+cardio$Obesidad <- factor(cardio$Obesidad)
+colnames(cardio)
+
+formula <- formula(
+  Obesidad ~ sexo +  hto + glicemia + ct + hdl + tgd)
+
+set.seed(123)
+
+## Se usará en principio el método CART sin el kfold, a que el tamaño
+## de la muestra parece ser pequeño para armar grupos y ademas no hay en la muestra
+## ningún dato faltante que se haya tenido que inventar. Luego se usa un arbol con validación
+## cruzada para comparar y arroja el mismo resultado
+
+
+arbol.train <- rpart(formula, data = cardio)
+arbol.train
+prp(arbol.train)
+plotcp(arbol.train, upper = "splits")
+rpart.plot(arbol.train, main = "2. Salida RPART")
+
+#Interpretacion:
+#De acuerdo al árbol anterior, se puede interpretar
+# que las variables más relevantes para establecer un patrón de
+# Obesidad son: Hematocrito y Glicemia.
+# -Si el Hematocrito era menor a 41, la probabilidad
+# de que la persona "NO" sea Obesa es de 0.88 (1-0,12), con lo que está
+# es la predicción.
+# -Mientras que si la persona posee un Hematocrito mayor a 41 y una 
+# Glicemia menor a 0,94, la probabilidad de que la persona "NO" sea
+# Obesa es del 0,76 (1-0,24); Si la Glicemia fuera
+# mayor a 0,94 la probabilidad de que "No" fuera obesa es del 0.33
+# (1-067).
+
+
+## usando el método de k-folds, con 8 grupos, 3 repeticiones
+caret.control <- trainControl(method = "repeatedcv",
+                              number = 8, #10kf
+                              repeats = 3) 
+
+
+arbol.obesidad <- train(formula, 
+                       data = cardio,
+                       method = "rpart",
+                       trControl = caret.control, tuneLength = 5)
+
+arbol.obesidad
+
+prp(arbol.obesidad$finalModel, main = "1. Salida PRP", extra = 101, type = 2,  xsep = "/")
+rpart.plot(arbol.obesidad$finalModel, main = "2. Salida RPART")
+
+
+printcp(arbol.obesidad$finalModel)
+
+# Ambos arboles cortan con una profundidad de dos niveles y tres capas.
+# La precisión del modelo  es de 0.65
+
+
+
+
+```
+
